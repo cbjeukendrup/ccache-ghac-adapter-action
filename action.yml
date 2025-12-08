@@ -63,8 +63,13 @@ runs:
             ;;
         esac
 
+        TMP_DIR="$RUNNER_TEMP"
+        if [[ "$RUNNER_OS" == "Windows" ]]; then
+          TMP_DIR="$(cygpath $RUNNER_TEMP)"
+        fi
+
         ADAPTER_URL="https://github.com/cbjeukendrup/ccache-ghac-adapter/releases/download/${TAG_NAME}/${FILE_NAME}"
-        ADAPTER_DIR="$RUNNER_TEMP/ccache-ghac-adapter"
+        ADAPTER_DIR="$TMP_DIR/ccache-ghac-adapter"
         mkdir -p "$ADAPTER_DIR"
         curl -L "$ADAPTER_URL" -o "$ADAPTER_DIR/ccache-ghac-adapter.tar.gz"
         tar -xzf "$ADAPTER_DIR/ccache-ghac-adapter.tar.gz" -C "$ADAPTER_DIR"
