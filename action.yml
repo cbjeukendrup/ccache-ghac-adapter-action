@@ -51,6 +51,9 @@ runs:
           "Linux X64")
             FILE_NAME="ccache-ghac-adapter-${TAG_NAME}-linux-x86_64.tar.gz"
             ;;
+          "Linux ARM64")
+            FILE_NAME="ccache-ghac-adapter-${TAG_NAME}-linux-aarch64.tar.gz"
+            ;;
           "macOS ARM64")
             FILE_NAME="ccache-ghac-adapter-${TAG_NAME}-macos-aarch64.tar.gz"
             ;;
