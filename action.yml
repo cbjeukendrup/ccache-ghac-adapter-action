@@ -17,48 +17,38 @@ inputs:
 runs:
   using: "composite"
   steps:
-    - name: "Install ccache"
-      shell: bash
-      run: |
-        if [[ "$RUNNER_OS" == "Linux" ]]; then
-          sudo apt-get install -y ccache
-        elif [[ "$RUNNER_OS" == "macOS" ]]; then
-          brew install ccache
-        elif [[ "$RUNNER_OS" == "Windows" ]]; then
-          choco install ccache
-        fi
-
-        ccache --version
-
-    - name: "Get latest ccache-ghac-adapter release"
+    - name: "Get latest ccache release"
       uses: actions/github-script@v8
-      id: get_release
+      id: get_ccache_release
       with:
         script: |
           const response = await github.rest.repos.getLatestRelease({
-            owner: 'cbjeukendrup',
-            repo: 'ccache-ghac-adapter',
+            owner: 'ccache',
+            repo: 'ccache',
           });
           core.setOutput('tag_name', response.data.tag_name);
 
-    - name: "Install ccache-ghac-adapter"
+    - name: "Install ccache"
       shell: bash
       env:
-        TAG_NAME: ${{ steps.get_release.outputs.tag_name }}
+        CCACHE_TAG: ${{ steps.get_ccache_release.outputs.tag_name }}
       run: |
         # Download from GitHub releases
         case "$RUNNER_OS $RUNNER_ARCH" in
           "Linux X64")
-            FILE_NAME="ccache-ghac-adapter-${TAG_NAME}-linux-x86_64.tar.gz"
+            FILE_NAME="ccache-${CCACHE_TAG#v}-linux-x86_64.tar.xz"
             ;;
           "Linux ARM64")
-            FILE_NAME="ccache-ghac-adapter-${TAG_NAME}-linux-aarch64.tar.gz"
+            FILE_NAME="ccache-${CCACHE_TAG#v}-linux-aarch64.tar.xz"
             ;;
           "macOS ARM64")
-            FILE_NAME="ccache-ghac-adapter-${TAG_NAME}-macos-aarch64.tar.gz"
+            FILE_NAME="ccache-${CCACHE_TAG#v}-darwin.tar.gz"
             ;;
           "Windows X64")
-            FILE_NAME="ccache-ghac-adapter-${TAG_NAME}-windows-x86_64.tar.gz"
+            FILE_NAME="ccache-${CCACHE_TAG#v}-windows-x86_64.zip"
+            ;;
+          "Windows ARM64")
+            FILE_NAME="ccache-${CCACHE_TAG#v}-windows-aarch64.zip"
             ;;
           *)
             echo "Unsupported OS/Architecture combination: $RUNNER_OS/$RUNNER_ARCH"
@@ -71,11 +61,69 @@ runs:
           TMP_DIR="$(cygpath $RUNNER_TEMP)"
         fi
 
-        ADAPTER_URL="https://github.com/cbjeukendrup/ccache-ghac-adapter/releases/download/${TAG_NAME}/${FILE_NAME}"
+        CCACHE_URL="https://github.com/ccache/ccache/releases/download/${CCACHE_TAG}/${FILE_NAME}"
+        CCACHE_DIR="$TMP_DIR/ccache"
+        mkdir -p "$CCACHE_DIR"
+        curl -L "$CCACHE_URL" -o "$CCACHE_DIR/$FILE_NAME"
+        if [[ "$FILE_NAME" == *.zip ]]; then
+          unzip "$CCACHE_DIR/$FILE_NAME" -d "$CCACHE_DIR"
+        else
+          tar -xf "$CCACHE_DIR/$FILE_NAME" -C "$CCACHE_DIR"
+        fi
+        rm "$CCACHE_DIR/$FILE_NAME"
+
+        export PATH="$CCACHE_DIR:$PATH"
+        echo "$CCACHE_DIR" >> $GITHUB_PATH
+
+        ccache --version
+
+    - name: "Get latest ccache-ghac-adapter release"
+      uses: actions/github-script@v8
+      id: get_adapter_release
+      with:
+        script: |
+          const response = await github.rest.repos.getLatestRelease({
+            owner: 'cbjeukendrup',
+            repo: 'ccache-ghac-adapter',
+          });
+          core.setOutput('tag_name', response.data.tag_name);
+
+    - name: "Install ccache-ghac-adapter"
+      shell: bash
+      env:
+        ADAPTER_TAG: ${{ steps.get_adapter_release.outputs.tag_name }}
+      run: |
+        # Download from GitHub releases
+        case "$RUNNER_OS $RUNNER_ARCH" in
+          "Linux X64")
+            FILE_NAME="ccache-ghac-adapter-${ADAPTER_TAG}-linux-x86_64.tar.gz"
+            ;;
+          "Linux ARM64")
+            FILE_NAME="ccache-ghac-adapter-${ADAPTER_TAG}-linux-aarch64.tar.gz"
+            ;;
+          "macOS ARM64")
+            FILE_NAME="ccache-ghac-adapter-${ADAPTER_TAG}-macos-aarch64.tar.gz"
+            ;;
+          "Windows X64")
+            FILE_NAME="ccache-ghac-adapter-${ADAPTER_TAG}-windows-x86_64.tar.gz"
+            ;;
+          *)
+            echo "Unsupported OS/Architecture combination: $RUNNER_OS/$RUNNER_ARCH"
+            exit 1
+            ;;
+        esac
+
+        TMP_DIR="$RUNNER_TEMP"
+        if [[ "$RUNNER_OS" == "Windows" ]]; then
+          TMP_DIR="$(cygpath $RUNNER_TEMP)"
+        fi
+
+        ADAPTER_URL="https://github.com/cbjeukendrup/ccache-ghac-adapter/releases/download/${ADAPTER_TAG}/${FILE_NAME}"
         ADAPTER_DIR="$TMP_DIR/ccache-ghac-adapter"
         mkdir -p "$ADAPTER_DIR"
-        curl -L "$ADAPTER_URL" -o "$ADAPTER_DIR/ccache-ghac-adapter.tar.gz"
-        tar -xzf "$ADAPTER_DIR/ccache-ghac-adapter.tar.gz" -C "$ADAPTER_DIR"
+        curl -L "$ADAPTER_URL" -o "$ADAPTER_DIR/$FILE_NAME"
+        tar -xf "$ADAPTER_DIR/$FILE_NAME" -C "$ADAPTER_DIR"
+        rm "$ADAPTER_DIR/$FILE_NAME"
 
         export PATH="$ADAPTER_DIR:$PATH"
         echo "$ADAPTER_DIR" >> $GITHUB_PATH
