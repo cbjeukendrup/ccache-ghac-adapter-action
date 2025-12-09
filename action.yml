@@ -36,19 +36,24 @@ runs:
         # Download from GitHub releases
         case "$RUNNER_OS $RUNNER_ARCH" in
           "Linux X64")
-            FILE_NAME="ccache-${CCACHE_TAG#v}-linux-x86_64.tar.xz"
+            FILE_NAME="ccache-${CCACHE_TAG#v}-linux-x86_64"
+            EXTENSION="tar.xz"
             ;;
           "Linux ARM64")
-            FILE_NAME="ccache-${CCACHE_TAG#v}-linux-aarch64.tar.xz"
+            FILE_NAME="ccache-${CCACHE_TAG#v}-linux-aarch64"
+            EXTENSION="tar.xz"
             ;;
           "macOS ARM64")
-            FILE_NAME="ccache-${CCACHE_TAG#v}-darwin.tar.gz"
+            FILE_NAME="ccache-${CCACHE_TAG#v}-darwin"
+            EXTENSION="tar.gz"
             ;;
           "Windows X64")
-            FILE_NAME="ccache-${CCACHE_TAG#v}-windows-x86_64.zip"
+            FILE_NAME="ccache-${CCACHE_TAG#v}-windows-x86_64"
+            EXTENSION="zip"
             ;;
           "Windows ARM64")
-            FILE_NAME="ccache-${CCACHE_TAG#v}-windows-aarch64.zip"
+            FILE_NAME="ccache-${CCACHE_TAG#v}-windows-aarch64"
+            EXTENSION="zip"
             ;;
           *)
             echo "Unsupported OS/Architecture combination: $RUNNER_OS/$RUNNER_ARCH"
@@ -61,19 +66,19 @@ runs:
           TMP_DIR="$(cygpath $RUNNER_TEMP)"
         fi
 
-        CCACHE_URL="https://github.com/ccache/ccache/releases/download/${CCACHE_TAG}/${FILE_NAME}"
+        CCACHE_URL="https://github.com/ccache/ccache/releases/download/${CCACHE_TAG}/${FILE_NAME}.${EXTENSION}"
         CCACHE_DIR="$TMP_DIR/ccache"
         mkdir -p "$CCACHE_DIR"
-        curl -L "$CCACHE_URL" -o "$CCACHE_DIR/$FILE_NAME"
-        if [[ "$FILE_NAME" == *.zip ]]; then
-          unzip "$CCACHE_DIR/$FILE_NAME" -d "$CCACHE_DIR"
+        curl -L "$CCACHE_URL" -o "$CCACHE_DIR/$FILE_NAME.$EXTENSION"
+        if [[ "$EXTENSION" == "zip" ]]; then
+          unzip "$CCACHE_DIR/$FILE_NAME.$EXTENSION" -d "$CCACHE_DIR"
         else
-          tar -xf "$CCACHE_DIR/$FILE_NAME" -C "$CCACHE_DIR"
+          tar -xf "$CCACHE_DIR/$FILE_NAME.$EXTENSION" -C "$CCACHE_DIR"
         fi
-        rm "$CCACHE_DIR/$FILE_NAME"
+        rm "$CCACHE_DIR/$FILE_NAME.$EXTENSION"
 
-        export PATH="$CCACHE_DIR:$PATH"
-        echo "$CCACHE_DIR" >> $GITHUB_PATH
+        export PATH="$CCACHE_DIR/$FILE_NAME:$PATH"
+        echo "$CCACHE_DIR/$FILE_NAME" >> $GITHUB_PATH
 
         ccache --version
 
